@@ -205,6 +205,14 @@ theorem ctrl_iff_plain (a b : ℕ) : a + b = b + a ↔ True := ⟨fun _ => trivi
 /-- IFF control:  an iff inside a conjunction. -/
 theorem ctrl_iff_nested (n : ℕ) : (n < 1 ↔ n = 0) ∧ True := ⟨by omega, trivial⟩
 
+/-- CARRY control:  the conclusion is one of the hypotheses. -/
+theorem ctrl_carry_hyp (P : Prop) (h : P) : P ∧ True := ⟨h, trivial⟩
+/-- the model of a count, declared a model choice.  [model choice] -/
+def ctrlModelPart (n : ℕ) : ℕ := n + 16
+/-- CARRY control:  the statement names a declared model choice. -/
+theorem ctrl_carry_model (n : ℕ) : ctrlModelPart n = n + 16 := rfl
+/-- CARRY control:  a theorem with no hypothesis carrying it and no model choice. -/
+theorem good_carry_free (n : ℕ) (h : 2 ≤ n) : 1 < n := by omega
 /-- R1 control (1 Nov 2026):  a theorem that holds by `rfl` in substance, proved through `ext`;  the proof term carries
 `Set.ext` and nothing with content. -/
 def ctrlSetOf : Set ℕ := {n | n = n}
@@ -212,6 +220,76 @@ theorem ctrl_ext_rfl : ctrlSetOf = {n | n = n} := by ext n; exact Iff.rfl
 /-- R1 control:  the same through `funext`. -/
 def ctrlFn : ℕ → ℕ := fun n => n + 0
 theorem ctrl_funext_rfl : ctrlFn = fun n => n + 0 := by funext n; rfl
+
+/-- IFFSET control (from the VM thread's SetCtrl, 1 Nov 2026):  a predicate defined to be another. -/
+def ctrlSetP (n : ℕ) : Prop := n < 5
+/-- IFFSET control:  the set of `ctrlSetP` is the set of `n < 5`, by the definition and a membership lemma. -/
+theorem ctrl_set_hollow_def : {n : ℕ | ctrlSetP n} = {n | n < 5} := by ext n; simp only [Set.mem_ofPred_eq, ctrlSetP]
+/-- IFFSET control:  a union read back. -/
+theorem ctrl_set_hollow_union : {n : ℕ | n < 3 ∨ n = 7} = {n | n < 3} ∪ {n | n = 7} := rfl
+/-- IFFSET control:  a rewording through a logic lemma (`and_comm`), which R1 counts as content. -/
+theorem ctrl_set_and_comm : {n : ℕ | ctrlSetP n ∧ n > 3} = {n | n > 3 ∧ ctrlSetP n} := by ext n; simp [and_comm]
+/-- IFFSET control:  two bare conditions, equal by arithmetic. -/
+theorem ctrl_set_bare : {n : ℕ | n % 2 = 0} = {n | ¬ n % 2 = 1} := by ext n; simp only [Set.mem_ofPred_eq]; omega
+/-- IFFSET control (positive, from SetCtrl):  a side is built (an explicit finite set) and the proof needs arithmetic. -/
+theorem good_set_real : {n : ℕ | n * n = 4} = {2} := by
+  ext n; simp only [Set.mem_ofPred_eq, Set.mem_singleton_iff]
+  constructor
+  · intro h
+    have h3 : n ≤ 2 := by nlinarith
+    interval_cases n <;> simp_all
+  · rintro rfl; rfl
+/-- IFF control:  an iff that holds by a logic lemma alone. -/
+theorem ctrl_iff_logic (P Q : Prop) : P ∧ Q ↔ Q ∧ P := and_comm
+
+/-! R1:  a theorem that holds by `rfl`, stated through a project instance whose value uses an outside theorem (3 Nov
+2026:  `Nat.Prime.ne_zero`, inside a `NeZero`-style instance, made such a theorem pass R1). -/
+/-- a class with one proposition. -/
+class CtrlNZ (n : ℕ) : Prop where
+  ne : n ≠ 0
+/-- the instance, from primality:  its value uses `Nat.Prime.ne_zero`. -/
+instance ctrlNZ_of_prime (n : ℕ) [h : Fact n.Prime] : CtrlNZ n := ⟨h.out.ne_zero⟩
+/-- a definition that needs the instance and ignores it. -/
+def ctrlId (n : ℕ) [CtrlNZ n] (x : ℕ) : ℕ := x
+theorem ctrl_instance_rfl (n : ℕ) [Fact n.Prime] (x : ℕ) : ctrlId n x = x := rfl
+
+/-- LS control (2 Nov 2026):  a structure with `@[ext]`;  Lean writes `CtrlPt.ext` and `CtrlPt.ext_iff`. -/
+@[ext] structure CtrlPt where
+  /-- first coordinate. -/
+  x : ℕ
+  /-- second coordinate. -/
+  y : ℕ
+/-- LS control:  an enumeration;  Lean writes `CtrlColour.ofNat_ctorIdx`. -/
+inductive CtrlColour where
+  | red
+  | blue
+  deriving DecidableEq
+
+
+/-! The circle gate's controls (9 Nov 2026).  The self-test's registry names `riemannZeta` as a problem object (kind
+`data`) and `riemannZeta_zero` as a known result (kind `known`). -/
+
+/-- a construction that takes in the problem's own data, ζ, and cancels it (circle gate Q1 must FAIL). -/
+noncomputable def zetaShadow (s : ℂ) : ℂ := riemannZeta s + riemannZeta (1 - s) - riemannZeta s - riemannZeta (1 - s) + s
+
+/-- Q1 control:  a true statement about a construction fed with ζ, which says nothing about ζ. -/
+theorem ctrl_circle_data (s : ℂ) : zetaShadow s = s := by
+  unfold zetaShadow
+  ring
+
+/-- Q2 control:  a hypothesis that `ρ` is a zero of ζ, never used, so the statement holds for every `ρ`. -/
+theorem ctrl_circle_every (ρ : ℂ) (_h : riemannZeta ρ = 0) : ρ + 0 = ρ := add_zero ρ
+
+/-- Q2 control for the swap:  no hypothesis, but the statement holds with any function in ζ's place. -/
+theorem ctrl_circle_swap (s : ℂ) : riemannZeta s - riemannZeta s = 0 := sub_self _
+
+/-- Q2 good control and Q5 control:  the value of ζ at 0, which depends on ζ and is a known result. -/
+theorem ctrl_circle_dep : riemannZeta 0 = -1 / 2 := riemannZeta_zero
+
+/-- the circle gate's passing control:  depends on ζ, is no registered known result, and does not circle. -/
+theorem ctrl_circle_new : riemannZeta 0 ≠ 0 := by
+  rw [riemannZeta_zero]
+  norm_num
 
 end RefereeControls
 
