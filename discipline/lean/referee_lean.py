@@ -32,6 +32,9 @@ per line, every kind empty in the release:
     carrier   a structure whose instances store propositions in their sections (R6)
     cite      a regular expression for a citation of the project's internal notes in a Lean file (L5)
     note      a regular expression for a non-library line, such as a ledger or session note (L6)
+    data      a problem object (a Lean constant), the problem's own data:  circle gate Q1 and Q2 measure against it
+    known     a theorem known to hold unconditionally (a Lean constant):  circle gate Q5, a label (KNOWN REVIEW)
+    pin       a source file of a registered target, pinned:  `pin<TAB>path<TAB>sha256[<TAB>equivalence theorem]` (PIN)
 
 The self-test runs the planted controls of controls/RefereeControls.lean and the expectations of controls.tsv, and
 exits 1 when any control is not caught by its check or any positive control is flagged.  `--mutations` then runs
@@ -42,7 +45,7 @@ import os, re, subprocess, sys, tempfile
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 CHECKS = ["L0", "L1", "L1u", "L2", "L3", "L4", "L5", "L6", "LS", "R1", "R2", "R3", "R4", "R5", "R6", "R7", "R1i", "DUP", "SHADOW", "INST", "VEND",
-          "R1k", "UNFOLD", "BRIDGED", "CARRIER", "BEHAVE", "IFF"]
+          "R1k", "UNFOLD", "BRIDGED", "CARRIER", "BEHAVE", "IFF", "IFFSET", "CARRY", "CIRCLE1", "CIRCLE2", "KNOWN", "CIRCLE", "PIN"]
 # computed in Python over the unfold pass's lines (a whole package, or the self-test's check file), not per theorem in Lean
 PACKAGE_CHECKS = ("UNFOLD", "BRIDGED", "CARRIER")
 UNFOLD_OUT = None  # --unfold-out=DIR:  write each run's unfold lines there
@@ -54,7 +57,7 @@ SCOPE_ROOT = None  # the package root imported for L2's inhabitant search (--sco
 STRENGTH = {"D": 0, "C-vacuous": 0, "C": 1, "DEF": 1, "B": 2, "A?": 3, "A": 3}
 
 
-KINDS = ("root", "open", "target", "claim", "carrier", "cite", "note")
+KINDS = ("root", "open", "target", "claim", "carrier", "cite", "note", "data", "known", "pin")
 REGISTRY = os.environ.get("DISCIPLINE_LEAN_REGISTRY") or os.path.join(HERE, "registry.tsv")
 
 
@@ -64,7 +67,8 @@ def registry(path=None):
     for ln in open(path or REGISTRY, encoding="utf-8"):
         if ln.startswith("#") or not ln.strip():
             continue
-        kind, value = (ln.rstrip("\n").split("\t") + [""])[:2]
+        parts = ln.rstrip("\n").split("\t") + [""]
+        kind, value = parts[0], ("\t".join(parts[1:]).strip("\t") if parts[0] == "pin" else parts[1])
         if kind not in reg:
             sys.exit(f"registry: unknown kind {kind!r} (known: {', '.join(KINDS)})")
         reg[kind].append(value.strip())
@@ -80,6 +84,7 @@ def core_text(off):
     t = open(os.path.join(HERE, "RefereeCore.lean")).read()
     t = t.replace("@@ROOTS@@", lean_list(reg["root"])).replace("@@OPEN@@", lean_list(reg["open"]))
     t = t.replace("@@TARGETS@@", lean_list(reg["target"]))
+    t = t.replace("@@DATA@@", lean_list(reg["data"])).replace("@@KNOWN@@", lean_list(reg["known"]))
     t = t.replace("@@OFF@@", "[" + ", ".join(f'"{c}"' for c in off) + "]")
     return t
 
@@ -88,7 +93,12 @@ def build_file(modules, body, names, off, extra_imports=(), header_tokens=None, 
     imports = "".join(f"import {m}\n" for m in list(extra_imports) + list(modules))
     core = core_text(off)
     core = core.split("import Lean\n", 1)
-    text = imports + "import Lean\n" + core[1] + "\n" + body + "\n" + "".join(f"#referee {n}\n" for n in names)
+    # the step limit of the referee's own commands (found 3 Nov 2026 on the OAI Hodge closure:  `#referee_module` on
+    # six groups of large HodgeConjecture modules stopped at Lean's default of 200000 heartbeats, after the modules
+    # themselves had built);  finite, so a runaway check still stops;  REFEREE_HEARTBEATS overrides it (0 = no limit)
+    hb = os.environ.get("REFEREE_HEARTBEATS", "4000000")
+    text = (imports + "import Lean\n" + core[1] + "\n" + f"set_option maxHeartbeats {hb}\n" + body + "\n"
+            + "".join(f"#referee {n}\n" for n in names))
     for m, toks in ({} if "L4" in off else (header_tokens or {})).items():
         text += f'#referee_resolve {m} "{" ".join(sorted(toks))}"\n'
     # L7:  the storage walk of each module (RefereeCore prints nothing when L7 is switched off)
@@ -217,6 +227,38 @@ def header_of(src):
     return "\n".join(parts)
 
 
+_SRC_ROOTS = {}
+
+
+def src_path(project, m):
+    """the source file of module `m`:  under the project, else under the folder below it that holds the module's first
+    component (a Lake `srcDir`, as in the OAI Hodge closure, 2 Nov 2026:  `HodgeConjecture` sat below the project
+    folder, and every group's class step stopped on FileNotFoundError after Lean had run).  The folder found is kept
+    for the run.  None when no file is found."""
+    rel = m.replace(".", "/") + ".lean"
+    first = m.split(".")[0]
+    for root in [project, _SRC_ROOTS.get((project, first))]:
+        if root and os.path.exists(os.path.join(root, rel)):
+            return os.path.join(root, rel)
+    for dirpath, dirnames, _ in os.walk(project):
+        dirnames[:] = [d for d in dirnames if not d.startswith(".") and d not in ("build", "lake-packages")]
+        if dirpath[len(project):].count(os.sep) > 3:
+            dirnames[:] = []
+            continue
+        if os.path.exists(os.path.join(dirpath, rel)):
+            _SRC_ROOTS[(project, first)] = dirpath
+            return os.path.join(dirpath, rel)
+    return None
+
+
+def missing_sources(project, mods):
+    """SRC:  every module named has a source file;  checked before Lean runs, so a wrong project folder stops at once."""
+    gone = [m for m in mods if src_path(project, m) is None]
+    for m in gone:
+        print(f"REFEREE\tSRC\t{m}\tFAIL\tno source file for the module under {project} (looked to depth 3)")
+    return gone
+
+
 def header_tokens_of(src):
     head = header_of(src)
     return {t for t in re.findall(r"`([A-Za-z_][A-Za-z0-9_'.]*)`", head) if not t.endswith(".lean") and "/" not in t}
@@ -225,8 +267,8 @@ def header_tokens_of(src):
 def l4(project, modules, names):
     rows = []
     for m in modules:
-        path = os.path.join(project, m.replace(".", "/") + ".lean")
-        if not os.path.exists(path):
+        path = src_path(project, m)
+        if path is None:
             rows.append(("L4", m, "FAIL", "module file not found"))
             continue
         src = open(path, encoding="utf-8", errors="replace").read()
@@ -300,6 +342,49 @@ def static_rows(thm, src, lean_rows, off):
             rows.append(("R6", thm, "FAIL", f"states a property of {hit}, whose sections are propositions: the target sits in the sections"))
         else:
             rows.append(("R6", thm, "PASS", "no proposition-section carrier in the statement"))
+    if "CIRCLE" not in off:
+        rows.append(circle_row(thm, lean_rows))
+    return rows
+
+
+def circle_row(thm, lean_rows):
+    """The circle gate (project-record/clay/CIRCLE-GATE.md, Q1–Q6), one row per theorem from the rows already made:
+    Q1 CIRCLE1, Q2 CIRCLE2, Q3 R1 (agreement by unfolding) or DUP (the same definition under two names), Q4 R2 (an
+    iff with an open side), Q5 KNOWN.  One "yes" on Q1–Q4:  FAIL, the step circles (class CIRCLE).  Only Q5:  REVIEW,
+    "unconditional, not a step toward the target".  Otherwise PASS, with Q6 asked of the person:  name the one new
+    statement."""
+    st = {c: s_ for c, _, s_, _ in lean_rows}
+    yes = [q for q, hit in (("Q1", st.get("CIRCLE1") == "FAIL"), ("Q2", st.get("CIRCLE2") == "FAIL"),
+                            ("Q3", st.get("R1") == "FAIL" or st.get("DUP") in ("REVIEW", "FAIL")),
+                            ("Q4", st.get("R2") == "FAIL")) if hit]
+    if yes:
+        return ("CIRCLE", thm, "FAIL", f"circles on {yes}: true, but it carries no information about the problem")
+    if st.get("KNOWN") == "REVIEW":
+        return ("CIRCLE", thm, "REVIEW", "unconditional (Q5): a native build, not a step toward the target")
+    return ("CIRCLE", thm, "PASS", "passes Q1–Q4; Q6: name the one new statement it makes")
+
+
+def pin_rows(pins, base, label=None):
+    """E1, source pinning of a registered target (9 Nov 2026):  each `pin` is a source file with the sha256 it was
+    pinned at.  Unchanged:  PASS.  Changed with an equivalence theorem named on the pin:  REVIEW (a person confirms
+    that theorem states the equivalence and passes the referee).  Changed with none:  FAIL, the target moved."""
+    import hashlib
+    rows = []
+    for i, p in enumerate(pins):
+        f = (p.split("\t") + ["", ""])[:3]
+        path, want, bridge = f[0].strip(), f[1].strip(), f[2].strip()
+        full = path if os.path.isabs(path) else os.path.join(base, path)
+        name = (label[i] if label else path)
+        if not os.path.exists(full):
+            rows.append(("PIN", name, "FAIL", f"{path}: the pinned file is missing"))
+            continue
+        got = hashlib.sha256(open(full, "rb").read()).hexdigest()
+        if got == want:
+            rows.append(("PIN", name, "PASS", f"{path}: unchanged since pinning ({want[:12]})"))
+        elif bridge:
+            rows.append(("PIN", name, "REVIEW", f"{path}: changed ({want[:12]} -> {got[:12]}); equivalence named: {bridge}; a person confirms it"))
+        else:
+            rows.append(("PIN", name, "FAIL", f"{path}: changed since pinning ({want[:12]} -> {got[:12]}) with no equivalence to the pinned version"))
     return rows
 
 
@@ -522,6 +607,8 @@ def classify(thm_rows):
         return "D"
     if st.get("R1") == "FAIL":
         return "DEF"
+    if st.get("CIRCLE") == "FAIL":
+        return "CIRCLE"
     return "A?"
 
 
@@ -574,7 +661,9 @@ def report(project, manifest, off):
         f = ln.rstrip("\n").split("\t")
         entries.append(dict(thm=f[0], module=f[1], claimed=f[2], known=f[3] if len(f) > 3 else ""))
     mods = sorted({e["module"] for e in entries})
-    toks = {m: header_tokens_of(open(os.path.join(project, m.replace(".", "/") + ".lean"), encoding="utf-8",
+    if missing_sources(project, mods):
+        return 1
+    toks = {m: header_tokens_of(open(src_path(project, m), encoding="utf-8",
                                        errors="replace").read()) for m in mods}
     rows, names, errs, raw = run_lean(project, build_file(mods, "", [e["thm"] for e in entries], off, header_tokens=toks,
                                                           storage=mods))
@@ -585,12 +674,12 @@ def report(project, manifest, off):
     rows += l4(project, mods, names)
     if "L5" not in off:
         for m in mods:
-            srcm = open(os.path.join(project, m.replace(".", "/") + ".lean"), encoding="utf-8", errors="replace").read()
+            srcm = open(src_path(project, m), encoding="utf-8", errors="replace").read()
             rows.append(l5(m, srcm))
             if "L6" not in off:
                 rows.append(l6(m, srcm))
     for m in mods:
-        srcm = open(os.path.join(project, m.replace(".", "/") + ".lean"), encoding="utf-8", errors="replace").read()
+        srcm = open(src_path(project, m), encoding="utf-8", errors="replace").read()
         if "INST" not in off:
             rows.append(inst(m, srcm))
         if "VEND" not in off:
@@ -598,7 +687,7 @@ def report(project, manifest, off):
     worst = 0
     for e in entries:
         mine = [r for r in rows if r[1].endswith(e["thm"]) and r[0] not in MODULE_ROWS]
-        src = open(os.path.join(project, e["module"].replace(".", "/") + ".lean"), encoding="utf-8", errors="replace").read()
+        src = open(src_path(project, e["module"]), encoding="utf-8", errors="replace").read()
         mine += static_rows(e["thm"], src, mine, off)
         for r in mine:
             print("REFEREE\t" + "\t".join(r))
@@ -644,7 +733,9 @@ def report(project, manifest, off):
 def report_modules(project, mods, off):
     """every theorem of each module, found in the compiled environment (`#referee_module`);  no claimed class:  the
     class each theorem computes, and FAIL only on what is broken in any class."""
-    toks = {m: header_tokens_of(open(os.path.join(project, m.replace(".", "/") + ".lean"), encoding="utf-8",
+    if missing_sources(project, mods):
+        return 1
+    toks = {m: header_tokens_of(open(src_path(project, m), encoding="utf-8",
                                        errors="replace").read()) for m in mods}
     # L2 scope:  with `--scope-root=<module>` the check file also imports that module (the package root), so an
     # inhabitant of a hypothesis built anywhere in the package is found;  the theorems checked are still only those of
@@ -676,7 +767,7 @@ def report_modules(project, mods, off):
             by.setdefault(r[1], []).append(r)
     for thm, mine in by.items():
         mod = next((m for m in mods if thm.startswith(m + ".") or thm.startswith(m.rsplit(".", 1)[0])), mods[0])
-        src = open(os.path.join(project, mod.replace(".", "/") + ".lean"), encoding="utf-8", errors="replace").read()
+        src = open(src_path(project, mod), encoding="utf-8", errors="replace").read()
         mine += static_rows(thm, src, mine, off)
         for r in mine:
             print("REFEREE\t" + "\t".join(r))
@@ -693,7 +784,7 @@ def report_modules(project, mods, off):
             elif r[0] == "L7" and r[2] == "REVIEW":
                 worst = max(worst, 2)
     for m in mods:
-        srcm = open(os.path.join(project, m.replace(".", "/") + ".lean"), encoding="utf-8", errors="replace").read()
+        srcm = open(src_path(project, m), encoding="utf-8", errors="replace").read()
         mrows = [l5(m, srcm), l6(m, srcm)]
         if "INST" not in off:
             mrows.append(inst(m, srcm))
@@ -708,22 +799,48 @@ def report_modules(project, mods, off):
     return {0: 0, 2: 2, 3: 1}[worst]
 
 
+def strip_block_comments(src):
+    """the source with every block comment (`/- … -/`, nested, docstrings included) blanked to spaces, newlines kept:
+    a comment line that starts with `end` or `theorem` is no scope and no theorem."""
+    out, depth, i, n = [], 0, 0, len(src)
+    while i < n:
+        two = src[i:i + 2]
+        if two == "/-":
+            depth += 1
+            out.append("  ")
+            i += 2
+        elif two == "-/" and depth:
+            depth -= 1
+            out.append("  ")
+            i += 2
+        else:
+            c = src[i]
+            out.append(c if depth == 0 or c == "\n" else " ")
+            i += 1
+    return "".join(out)
+
+
 def module_manifest(project, path):
     """every theorem of one module, with no claimed class:  the referee then reports the class it computes and fails
     only on what is broken in any class (L0, L1, L3, L4, R5)."""
     src = open(os.path.join(project, path), encoding="utf-8", errors="replace").read()
     mod = path[:-5].replace("/", ".")
-    ns = []
+    # one stack of open scopes:  a namespace adds its name to the prefix, a section (named or not) or a `mutual`
+    # block adds nothing, and `end` closes the innermost scope of either kind (`end torus` closes `section torus`,
+    # not the namespace around it)
+    scopes = []
     names = []
-    for ln in src.split("\n"):
+    for ln in strip_block_comments(src).split("\n"):
         m = re.match(r"namespace\s+(\S+)", ln)
         if m:
-            ns.append(m.group(1))
-        if re.match(r"end\s+\S+", ln) and ns:
-            ns.pop()
+            scopes.append(m.group(1))
+        elif re.match(r"(?:(?:noncomputable|public|private)\s+)*section\b", ln) or re.match(r"mutual\s*$", ln):
+            scopes.append(None)
+        elif re.match(r"end\b", ln) and scopes:
+            scopes.pop()
         m = re.match(r"(?:private |protected )?theorem\s+(\S+)", ln)
         if m:
-            names.append(".".join(ns + [m.group(1)]))
+            names.append(".".join([s for s in scopes if s] + [m.group(1)]))
     fd, tmp = tempfile.mkstemp(suffix=".tsv")
     with os.fdopen(fd, "w") as f:
         for n in names:
@@ -736,7 +853,8 @@ def module_manifest(project, path):
 SKIP_CONTROLS = {"RefereeControls.eq_of_x": "PASS", "RefereeControls.ctrlFun.eq_1": "INFO",
                  "RefereeControls.ctrlFun.eq_def": "INFO", "RefereeControls.ctrlFun.match_1": "INFO",
                  "RefereeControls.ctrlFun.match_1_1": "INFO", "Nat.brecOn": "INFO", "RefereeControls.match_up": "PASS",
-                 "RefereeControls.controlled_x": "PASS"}
+                 "RefereeControls.controlled_x": "PASS", "RefereeControls.CtrlPt.ext": "INFO",
+                 "RefereeControls.CtrlPt.ext_iff": "INFO", "RefereeControls.CtrlColour.ofNat_ctorIdx": "INFO"}
 
 
 def selftest(project, off, quiet=False, rows_out=None):
@@ -796,6 +914,18 @@ def _selftest(project, off, quiet=False, rows_out=None):
     if "VEND" not in off:
         rows.append(vend("RefereeVendored", "Proj/Mathlib/Algebra/Group/Basic.lean"))
         rows.append(vend("RefereeNotVendored", "Proj/Base/Group.lean"))
+    if "PIN" not in off:
+        import hashlib
+        fd, pinned = tempfile.mkstemp(suffix=".lean")
+        os.close(fd)
+        try:
+            with open(pinned, "w") as f:
+                f.write("theorem pinned_target : True := trivial\n")
+            h = hashlib.sha256(open(pinned, "rb").read()).hexdigest()
+            rows += pin_rows([f"{pinned}\t{h}", f"{pinned}\t{'0' * 64}", f"{pinned}\t{'0' * 64}\tRefereeControls.ctrl_circle_dep"],
+                             "/", label=["RefereePinGood", "RefereePinMoved", "RefereePinBridged"])
+        finally:
+            os.remove(pinned)
     rows += package_checks(unfold_lines(raw), off,
                            cover=["RefereeControls." + t for t in thms if not t.startswith("Referee")])
     if "BEHAVE" not in off:
@@ -944,6 +1074,10 @@ def main(argv):
             print("UNFOLD_LIBRARY\terrors: " + " | ".join(errs[:5]))
             return 1
         return 0
+    if (modules or manifest) and "PIN" not in off:
+        # E1:  the registered targets' pinned sources, checked before the theorems
+        for r in pin_rows(registry()["pin"], project):
+            print("REFEREE\t" + "\t".join(r))
     if modules:
         return report_modules(project, modules, off)
     if sig:

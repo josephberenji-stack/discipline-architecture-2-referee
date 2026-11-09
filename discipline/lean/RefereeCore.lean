@@ -79,6 +79,11 @@ def coreRelations : List Name := [`Ne, `Eq, `LE.le, `LT.lt, `GE.ge, `GT.gt, `Not
 
 def openProblems : List Name := @@OPEN@@
 def targetStatements : List Name := @@TARGETS@@
+/-- the circle gate's registered problem objects (kind `data`):  the problem's own data, such as ζ or the Hodge
+classes as given (`project-record/clay/CIRCLE-GATE.md`, Q1 and Q2). -/
+def problemData : List Name := @@DATA@@
+/-- theorems known to hold unconditionally (kind `known`):  circle gate Q5, a label that changes no class. -/
+def knownResults : List Name := @@KNOWN@@
 def off : List String := @@OFF@@
 
 def emit (check thm status detail : String) : CommandElabM Unit :=
@@ -146,10 +151,52 @@ partial def firstContent (env : Environment) (n : Name) (seen : IO.Ref NameSet) 
     if (← seen.get).contains c then continue
     seen.modify (·.insert c)
     if inProject env c then
+      -- Correction (3 Nov 2026):  a project instance is plumbing like an outside one:  its value holds the proofs the
+      -- instance needs (`NeZero N` from `Nat.Prime.ne_zero`), not the theorem's argument;  entering it let a theorem
+      -- that holds by `rfl` pass R1 through the instance (PrismSenses, ScrewStack.part_rot).
+      if Meta.isInstanceCore env c then continue
       if let some w ← firstContent env c seen then return some w
     else
       match env.find? c with
       | some (.thmInfo _) => if !isCore c && !plumbing env c then return some c
+      | _ => pure ()
+  return none
+
+/-- logic and membership:  outside theorems that reword a statement without content of their own (2 Nov 2026:  `ext;
+simp [and_comm]` and `simp only [Set.mem_ofPred_eq, P]` passed R1 through them).  The theorems of the modules of Lean's
+logic and of Mathlib's logic and set notation, and the membership lemmas of the set operations. -/
+def logicModules : List Name := [`Init.Prelude, `Init.Core, `Init.SimpLemmas, `Init.PropLemmas, `Init.Classical,
+  `Init.Ext, `Mathlib.Logic.Basic, `Mathlib.Data.Set.Defs, `Mathlib.Order.SetNotation]
+def membershipTheorems : List Name := [`Set.mem_ofPred_eq, `Set.mem_setOf_eq, `Set.mem_def, `Set.mem_union,
+  `Set.mem_inter_iff, `Set.mem_compl_iff, `Set.mem_diff, `Set.mem_preimage, `Set.mem_image, `Set.mem_range,
+  `Set.mem_singleton_iff, `Set.mem_insert_iff, `Set.mem_univ, `Set.mem_empty_iff_false, `Set.mem_iUnion,
+  `Set.mem_iInter, `Set.mem_sUnion, `Set.mem_sInter, `Set.mem_prod, `Set.mem_Iio, `Set.mem_Iic, `Set.mem_Ioi,
+  `Set.mem_Ici, `Finset.mem_coe, `Finset.coe_insert, `Finset.coe_singleton, `Finset.coe_empty]
+
+def logicOnly (env : Environment) (c : Name) : Bool :=
+  -- `simp` stores a lemma it rewrites with as `<lemma>._simp_<n>`
+  let base := match c with
+    | .str p s => if s.startsWith "_simp" then p else c
+    | _ => c
+  membershipTheorems.contains base ||
+  match env.getModuleIdxFor? c with
+  | some i => logicModules.contains env.header.moduleNames[i.toNat]!
+  | none => false
+
+/-- the first theorem the proof of `n` reaches that carries content beyond logic and membership:  `firstContent`,
+also skipping `logicOnly` theorems. -/
+partial def firstContentBeyondLogic (env : Environment) (n : Name) (seen : IO.Ref NameSet) : IO (Option Name) := do
+  let some ci := env.find? n | return none
+  let some v := ci.value? (allowOpaque := true) | return none
+  for c in v.getUsedConstants do
+    if (← seen.get).contains c then continue
+    seen.modify (·.insert c)
+    if inProject env c then
+      if Meta.isInstanceCore env c then continue   -- as in `firstContent` (3 Nov 2026)
+      if let some w ← firstContentBeyondLogic env c seen then return some w
+    else
+      match env.find? c with
+      | some (.thmInfo _) => if !isCore c && !plumbing env c && !logicOnly env c then return some c
       | _ => pure ()
   return none
 
@@ -220,6 +267,7 @@ def isProjectProp (env : Environment) (c : Name) : MetaM Bool := do
   forallTelescope ci.type fun _ b => return b.isSort && b.sortLevel! == levelZero
 
 def mentionsOpen (e : Expr) : List Name := e.getUsedConstants.toList.filter (openProblems.contains ·)
+def mentionsData (e : Expr) : List Name := e.getUsedConstants.toList.filter (problemData.contains ·)
 
 /-- the first other project declaration whose type or value reaches `c`, if any. -/
 def usersOf (env : Environment) (c : Name) : Option Name := Id.run do
@@ -427,6 +475,63 @@ def runThm (n : Name) : CommandElabM Unit := do
         liftCommandElabM <| match hit with
           | some c => emit "R4" thm "REVIEW" s!"typechecks as the registered target statement {c}; a person confirms"
           | none => emit "R4" thm "INFO" "not a registered target statement"
+      -- The circle gate (project-record/clay/CIRCLE-GATE.md, COMMON-RULES § RH rule 7, adopted 4 Nov 2026;  added to
+      -- the referee 9 Nov 2026).  One "yes" on Q1–Q4 means the step circles:  it is true, but it carries no
+      -- information about the problem.  Q3 and Q4 are read in the driver from R1, DUP and R2;  Q6 is the driver's
+      -- CIRCLE row.  None of these rows changes a class here;  the driver's CIRCLE row does.
+      -- Q1:  a project definition the statement unfolds to takes in a registered problem object.
+      if !off.contains "CIRCLE1" then
+        let st := stmtClosure env ci.type {}
+        let mut takes : Array String := #[]
+        for c in st.toList do
+          if c == n || !inProject env c then continue
+          match env.find? c with
+          | some (.defnInfo dv) =>
+            let ds := mentionsData dv.value ++ mentionsData dv.type
+            if !ds.isEmpty then takes := takes.push s!"{c} takes in {ds.eraseDups}"
+          | _ => pure ()
+        liftCommandElabM <| if takes.isEmpty then
+            emit "CIRCLE1" thm "PASS" "no project definition of the statement takes in a registered problem object"
+          else emit "CIRCLE1" thm "FAIL" s!"the problem's own data is fed into a construction: {takes.toList.take 6}"
+      -- Q2:  true for every input.  (a) A hypothesis about a registered problem object that the proof never uses:  the
+      -- statement holds without it.  (b) Each registered problem object the statement names, replaced by a variable of
+      -- its type in the statement and in the proof:  if the kernel still accepts the proof, the theorem holds for
+      -- every value in its place, so it is about the construction (a proof by parametricity, not a heuristic).
+      if !off.contains "CIRCLE2" then
+        let mut unused : Array String := #[]
+        let mut general : Array Name := #[]
+        if let some v := ci.value? (allowOpaque := true) then
+          let vb := v.beta xs
+          for x in xs do
+            let t ← instantiateMVars (← inferType x)
+            if (← isProp t) && !(mentionsData t).isEmpty && !vb.containsFVar x.fvarId! then
+              unused := unused.push (String.mk (((toString (← ppExpr t)).replace "\n" " ").toList.take 60))
+          for c in (mentionsData ci.type).eraseDups do
+            if let some occ := ci.type.find? (·.isConstOf c) then
+              let cty ← inferType occ
+              let ok ← withLocalDeclD `swap cty fun y => do
+                let ty' := ci.type.replace fun e => if e.isConstOf c then some y else none
+                let v' := v.replace fun e => if e.isConstOf c then some y else none
+                try
+                  Meta.check v'
+                  isDefEq (← inferType v') ty'
+                catch _ => pure false
+              if ok then general := general.push c
+        liftCommandElabM <| if unused.isEmpty && general.isEmpty then
+            emit "CIRCLE2" thm "PASS" (if (mentionsData ci.type).isEmpty then "names no registered problem object"
+              else "the proof depends on the problem object it names")
+          else emit "CIRCLE2" thm "FAIL"
+            s!"true for every input: unused hypotheses {unused.toList.take 4}; holds with {general.toList} replaced by a variable"
+      -- Q5:  already known unconditionally.  A label, never a verdict.
+      if !off.contains "KNOWN" then
+        let mut k : Option Name := none
+        for c in knownResults do
+          if c == n then k := some c
+          else if let some kc := env.find? c then
+            if ← isDefEq ci.type kc.type then k := some c
+        liftCommandElabM <| match k with
+          | some c => emit "KNOWN" thm "REVIEW" s!"states the known unconditional result {c}: a native build, not a step toward the target"
+          | none => emit "KNOWN" thm "INFO" "not a registered known result"
       -- IFF (Joseph, 1 Nov 2026:  an iff stays only "unless iff is defining an explicit boundary"):  an iff that holds
       -- by definitions and logic alone rewords a definition, FAIL;  a top-level iff whose right side is a comparison,
       -- an equation, a membership or a connective of them that names a number states its boundary, PASS;  any other
@@ -436,18 +541,71 @@ def runThm (n : Name) : CommandElabM Unit := do
         let nested := !isIff && (body.find? (·.isAppOfArity ``Iff 2)).isSome
         if isIff || nested then
           let seenI ← IO.mkRef ({} : NameSet)
-          let fc ← firstContent env n seenI
+          let fc ← firstContentBeyondLogic env n seenI
           let rhs := if isIff then body.getArg! 1 else body
           let natLit := (rhs.find? (·.isRawNatLit)).isSome
           let rh := rhs.getAppFn.constName?.getD Name.anonymous
           let shape := [``Eq, ``Ne, ``LE.le, ``LT.lt, ``GE.ge, ``GT.gt, ``Or, ``And, ``Membership.mem, ``Not].contains rh
           let (st, d) :=
-            if fc.isNone then ("FAIL", "rewording: an iff that holds by definitions and logic alone")
+            if fc.isNone then ("FAIL", "rewording: an iff that holds by definitions, logic and membership alone")
             else if isIff && natLit && shape then ("PASS", "boundary: the right side states it in numbers")
             else if nested then ("REVIEW", "an iff inside the statement: a person decides whether it states a boundary")
             else ("REVIEW", "an iff whose right side names no boundary in numbers: state the boundary, or two implications")
           liftCommandElabM <| emit "IFF" thm st d
         else liftCommandElabM <| emit "IFF" thm "INFO" "not an iff"
+      -- IFFSET (Joseph, 2 Nov 2026, 14:44 UTC, "yes please", to:  a set equality is kept when a side is built;  none
+      -- closes by `rfl` or by `simp` unfolding alone):  for a statement that is an equation of sets, FAIL when its proof
+      -- carries no content beyond definitions, logic and membership lemmas (a rewording);  REVIEW when both sides are
+      -- bare conditions `{x | P x} = {x | Q x}` (an iff in another form:  two implications, or build one side);  PASS
+      -- when a side is built (a range, a preimage, a kernel, an explicit finite set, an operation of sets).  INFO when
+      -- the statement is not an equation of sets.  The row changes no class.
+      if !off.contains "IFFSET" then
+        let isSetEq := body.isAppOfArity ``Eq 3 && (body.getArg! 0).isAppOfArity `Set 1
+        if isSetEq then
+          let seenS ← IO.mkRef ({} : NameSet)
+          let fc ← firstContentBeyondLogic env n seenS
+          -- the set-builder `{x | P x}`:  `Set.ofPred` in this Mathlib, `setOf` in earlier ones
+          let bare (e : Expr) : Bool := e.isAppOfArity `Set.ofPred 2 || e.isAppOfArity `setOf 2
+          let l := body.getArg! 1
+          let r := body.getArg! 2
+          let (st, d) :=
+            if fc.isNone then ("FAIL", "rewording: a set equation that holds by definitions, logic and membership alone")
+            else if bare l && bare r then ("REVIEW", s!"two bare conditions (an iff in another form):  state two implications, or build one side;  content from {fc.get!}")
+            else ("PASS", s!"a side is built;  content from {fc.get!}")
+          liftCommandElabM <| emit "IFFSET" thm st d
+        else liftCommandElabM <| emit "IFFSET" thm "INFO" "not an equation of sets"
+      -- CARRY (Joseph, 1 Nov 2026, 17:57 UTC:  "so can we not put stuff in by hand";  17:58 UTC:  "thats maybe a
+      -- bigger violation than an iff"):  a conclusion carried in by hand.  FAIL when a hypothesis is the conclusion or
+      -- one of its conjuncts (up to reducible unfolding);  REVIEW when the statement names a project definition whose
+      -- docstring declares it a model choice (the tag `[model choice]`):  the result rests on that choice, and a
+      -- person decides whether the choice carries the conclusion;  PASS otherwise.  The row changes no class.
+      if !off.contains "CARRY" then
+        let mut conj : Array Expr := #[body]
+        let mut todo : Array Expr := #[body]
+        while !todo.isEmpty do
+          let e := todo.back!
+          todo := todo.pop
+          if e.isAppOfArity ``And 2 then
+            conj := conj.push (e.getArg! 0) |>.push (e.getArg! 1)
+            todo := todo.push (e.getArg! 0) |>.push (e.getArg! 1)
+        let mut carried : Option String := none
+        for x in xs do
+          let t ← instantiateMVars (← inferType x)
+          if !(← isProp t) then continue
+          for c in conj do
+            if carried.isNone then
+              if ← withReducible (isDefEq t c) then
+                carried := some ((toString (← ppExpr t)).replace "\n" " ")
+        let mut model : Array Name := #[]
+        for c in body.getUsedConstants.toList do
+          if inProject env c then
+            if let some d ← findDocString? env c then
+              if (d.splitOn "[model choice]").length > 1 then model := model.push c
+        liftCommandElabM <| match carried with
+          | some h => emit "CARRY" thm "FAIL" s!"carried by hand: the hypothesis {String.mk (h.toList.take 80)} is the conclusion or a conjunct of it"
+          | none =>
+            if !model.isEmpty then emit "CARRY" thm "REVIEW" s!"rests on the model choice {model.toList}: a person decides whether the choice carries the conclusion"
+            else emit "CARRY" thm "PASS" "no hypothesis is the conclusion; no model choice in the statement"
   -- R1
   if !off.contains "R1" then
     let seen ← IO.mkRef ({} : NameSet)
@@ -520,7 +678,10 @@ def copyOf? (env : Environment) (c : Name) : Option Name := Id.run do
 `Name.isInternal` marks a component starting with `_` (auxiliary proofs `_proof_<n>`, private names), but on Lean
 4.33.1 the equation lemmas (`f.eq_<n>`), unfolding lemmas (`f.eq_def`) and matcher equations (`match_<n>.eq_<k>`)
 carry no underscore and arrive as ordinary theorems.  Skipped:  `eq_` followed by digits, `eq_def`, `match_`
-followed by digits, `sizeOf_spec`, `congr_simp`, a constructor's `inj` / `injEq` and projections.  A person's theorem
+followed by digits, `sizeOf_spec`, `congr_simp`, a constructor's `inj` / `injEq`, projections, a structure's `ext` /
+`ext_iff` (what `@[ext]` writes;  2 Nov 2026, Joseph 17:33 UTC "implement the rest of the changes you suggested") and an
+inductive type's `ofNat_ctorIdx`.  Limit:  a person's own `S.ext` on a structure `S` is skipped too;  it states the same
+extensionality.  A person's theorem
 named `eq_of_…` or `controlled_…` is checked.  The shapes are a fact about the
 toolchain:  on a new toolchain, rerun the census and compare before trusting this list. -/
 def generatedName (env : Environment) (c : Name) : Bool :=
@@ -530,10 +691,17 @@ def generatedName (env : Environment) (c : Name) : Bool :=
   let parentIsCtor := match c with
     | .str p _ => (env.find? p).any (·.isCtor)
     | _ => false
+  let parentIsStruct := match c with
+    | .str p _ => isStructure env p
+    | _ => false
+  let parentIsInduct := match c with
+    | .str p _ => (env.find? p).any (·.isInductive)
+    | _ => false
   -- the compiler's matchers carry one or more numeric suffixes (`match_1`, `match_1_1`)
   let matcher : Bool := last.startsWith "match_" && last.length > 6 && (last.drop 6).all (fun ch => ch.isDigit || ch == '_')
   c.isInternal || numbered "eq_" || last == "eq_def" || matcher || last == "sizeOf_spec" || last == "congr_simp" ||
     ((last == "inj" || last == "injEq") && parentIsCtor) || env.isProjectionFn c ||
+    ((last == "ext" || last == "ext_iff") && parentIsStruct) || (last == "ofNat_ctorIdx" && parentIsInduct) ||
     isAuxRecursor env c || isNoConfusion env c
 
 /-- R1i, DUP, SHADOW:  the checks for proofs built from supplied inputs (INPUTS-DESIGN.md). -/

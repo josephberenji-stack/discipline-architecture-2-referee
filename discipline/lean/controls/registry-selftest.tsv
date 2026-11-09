@@ -2,3 +2,5 @@
 open	RiemannHypothesis
 target	RiemannHypothesis
 carrier	Psh
+data	riemannZeta
+known	riemannZeta_zero

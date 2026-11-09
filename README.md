@@ -1,8 +1,9 @@
 # discipline
 
-This repository holds Discipline-Architecture-2 at commit `6e33e0d` (1 Nov 2026), the version of the Lean referee
-run in the case study github.com/josephberenji-stack/oai-math-referee-case-study. The code is byte-identical to that
-commit (`MANIFEST-md5.txt`). Two parts are left out: `discipline/lean/runs/` and `discipline/lean/METHOD-LOG.md`,
+This repository holds Discipline-Architecture-2 at commit `c207f4b` (9 Nov 2026): the Lean referee with the circle
+gate and source pinning of targets (§ 21). The code is byte-identical to that commit (`MANIFEST-md5.txt`). The version
+run in the case study github.com/josephberenji-stack/oai-math-referee-case-study is commit `6e33e0d` (1 Nov 2026),
+kept here as the tag `case-study-6e33e0d`. Two parts are left out: `discipline/lean/runs/` and `discipline/lean/METHOD-LOG.md`,
 which hold the experiment runs and the working log over the author's own library. References to them in the design
 notes point to files that are not included here.
 
@@ -593,6 +594,11 @@ deletes it, and reads only the lines that start `REFEREE`.
 | R5 | the name claims a target its statement does not state | a theorem named as if it solved the target |
 | R6 | the statement mentions a registered carrier whose sections are propositions | the target stored in Prop-valued sections and read back |
 | R7 | (REVIEW) the proof is one application of a structural project lemma | content hidden in the arguments of a trivial step |
+| CIRCLE1 | (circle gate Q1) a project definition the statement unfolds to takes in a registered problem object (registry kind `data`) | the problem's own data fed into a construction that then reads it back |
+| CIRCLE2 | (circle gate Q2) a hypothesis about a registered problem object is never used by the proof, or the kernel still accepts the proof with that object replaced by a variable | a statement true for every input, so about the construction and not the problem |
+| KNOWN | (REVIEW, a label; circle gate Q5) the statement is a registered known result (registry kind `known`) | an unconditional result reported as a step toward the target |
+| CIRCLE | (one row per theorem, class CIRCLE) one "yes" on Q1–Q4: Q1 CIRCLE1, Q2 CIRCLE2, Q3 R1 or DUP, Q4 R2. PASS asks Q6: name the one new statement | a true step that carries no information about the problem |
+| PIN | a registered target's pinned source file (registry kind `pin`, path and sha256) changed with no equivalence to the pinned version named (FAIL), or with one named (REVIEW) | a target statement moved after it was registered |
 | R1i | (REVIEW) a theorem the proof uses, whose conclusion is a project proposition (a named input of a staged argument), holds by unfolding and logic alone | an input supplied trivially, the hard step moved into a definition |
 | DUP | (REVIEW) the theorem reaches two project definitions with identical type and value under different names, and no project theorem states their equivalence | two copies of one object, crossed without a proved bridge |
 | SHADOW | (REVIEW) the theorem reaches a project declaration that copies a library declaration (same name once the project root is removed, same type) | a copy that decides what a library name means by namespace or import order |

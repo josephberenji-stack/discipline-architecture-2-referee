@@ -1,5 +1,6 @@
 # theorem	check	expected status	(the planted fault it carries)
 ctrl_definitional	R1	FAIL	holds by unfolding a definition
+ctrl_instance_rfl	R1	FAIL	holds by rfl; an instance's value reaches an outside theorem
 ctrl_restatement	R2	FAIL	an iff with the open problem
 ctrl_conditional	R3	FAIL	the open problem under a hypothesis
 ctrl_conditional	L2	FAIL	the hypothesis is a structure carrying the conclusion, uninhabited
@@ -90,3 +91,31 @@ ctrl_iff_plain	IFF	REVIEW	an iff whose right side names no number
 ctrl_iff_nested	IFF	REVIEW	an iff inside a conjunction
 ctrl_ext_rfl	R1	FAIL	rfl in substance, proved through ext (Set.ext is plumbing)
 ctrl_funext_rfl	R1	FAIL	rfl in substance, proved through funext (caught before the fix too:  funext is in the logic core;  a regression row)
+ctrl_carry_hyp	CARRY	FAIL	a hypothesis is a conjunct of the conclusion
+ctrl_carry_model	CARRY	REVIEW	the statement names a declared model choice
+good_carry_free	CARRY	PASS	no hypothesis carries the conclusion
+ctrl_set_hollow_def	IFFSET	FAIL	a set equation by a definition and a membership lemma alone
+ctrl_set_hollow_union	IFFSET	FAIL	a union read back by rfl
+ctrl_set_and_comm	IFFSET	FAIL	a rewording through and_comm (a logic lemma R1 counts as content)
+ctrl_set_bare	IFFSET	REVIEW	two bare conditions:  an iff in another form
+good_set_real	IFFSET	PASS	positive control: a side is built and the proof needs arithmetic
+ctrl_iff_logic	IFF	FAIL	an iff that holds by a logic lemma alone (and_comm)
+ctrl_iff_plain	IFFSET	INFO	not an equation of sets
+ext	LS	INFO	the skip filter skips what @[ext] writes
+ext_iff	LS	INFO	the skip filter skips what @[ext] writes (iff form)
+ofNat_ctorIdx	LS	INFO	the skip filter skips an enumeration's generated ofNat_ctorIdx
+ctrl_circle_data	CIRCLE1	FAIL	a construction fed with the problem's own data
+ctrl_circle_data	CIRCLE	FAIL	circles on Q1
+ctrl_circle_data	CLASS	CIRCLE	circles on Q1
+ctrl_circle_every	CIRCLE2	FAIL	a hypothesis on the problem object the proof never uses
+ctrl_circle_every	KNOWN	INFO	not a registered known result
+ctrl_circle_dep	CIRCLE2	PASS	the proof depends on the problem object
+ctrl_circle_dep	KNOWN	REVIEW	a registered known result
+ctrl_circle_dep	CIRCLE	REVIEW	unconditional (Q5) only
+ctrl_circle_new	CIRCLE2	PASS	the proof depends on the problem object
+ctrl_circle_new	CIRCLE	PASS	passes Q1-Q4, not known
+RefereePinGood	PIN	PASS	a pinned file unchanged
+RefereePinMoved	PIN	FAIL	a pinned file changed with no equivalence
+RefereePinBridged	PIN	REVIEW	a pinned file changed with an equivalence named
+ctrl_circle_swap	CIRCLE2	FAIL	holds with any function in the problem object's place
+ctrl_circle_swap	CIRCLE	FAIL	circles on Q2

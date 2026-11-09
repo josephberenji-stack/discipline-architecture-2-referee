@@ -1,5 +1,25 @@
 # Changelog
 
+## 9 Nov 2026: the circle gate and source pinning of targets
+
+`RefereeCore.lean` and `referee_lean.py` add the circle gate's questions as checks.
+- CIRCLE1 (Q1): a construction takes in a registered problem object.
+- CIRCLE2 (Q2): true for every input, either through a hypothesis about the problem object that the proof never uses, or because the kernel still accepts the proof with the object replaced by a variable.
+- KNOWN (Q5): a label for registered known results.
+- CIRCLE: one row per theorem over Q1–Q4, giving the new class CIRCLE.
+
+E1 adds PIN: a registered target's pinned source must be unchanged, or come with an equivalence to the pinned version. The registry gains the kinds `data`, `known` and `pin`. New controls; self-test 114 of 114. The self-test fails with any one of the 34 checks switched off.
+
+## 1–3 Nov 2026: fixes carried from Discipline-Architecture-2 main
+
+- IFFSET rows for set equations; CARRY rows for a conclusion carried in by hand.
+- A project instance is plumbing for R1, like an outside one.
+- Generated names (`@[ext]`, `ofNat_ctorIdx`) are skipped.
+- SRC FAIL when a module's source is missing under a srcDir.
+- A finite step limit for the referee's own commands (`REFEREE_HEARTBEATS`).
+- The module manifest tracks sections and blanks block comments.
+- `Set`, `Set.ofPred` and `setOf` are named without being resolved.
+
 ## 30 Oct 2026: the decode step, run 1 (failed), and the behaviour step, registered
 
 `lean/DECODE-DESIGN.md` § Results:  run 1 over 362,657 library declarations failed controls 1 (1 of 20), 2 (2 of 12)
