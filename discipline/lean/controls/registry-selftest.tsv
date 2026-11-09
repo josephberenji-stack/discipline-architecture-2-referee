@@ -1,0 +1,4 @@
+# kind	value	(the self-test's own registry:  the controls measure against these, never against the project's)
+open	RiemannHypothesis
+target	RiemannHypothesis
+carrier	Psh

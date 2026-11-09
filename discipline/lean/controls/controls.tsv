@@ -1,0 +1,92 @@
+# theorem	check	expected status	(the planted fault it carries)
+ctrl_definitional	R1	FAIL	holds by unfolding a definition
+ctrl_restatement	R2	FAIL	an iff with the open problem
+ctrl_conditional	R3	FAIL	the open problem under a hypothesis
+ctrl_conditional	L2	FAIL	the hypothesis is a structure carrying the conclusion, uninhabited
+ctrl_vacuous	L3	FAIL	the hypothesis is refuted on file
+ctrl_reduction	L3	REVIEW	a reduction: refuted hypothesis, plain conclusion, used by another theorem
+ctrl_vacuous_unused	L3	FAIL	refuted hypothesis, plain conclusion, used by nothing
+ctrl_class_carries	L2	FAIL	a typeclass carrying the conclusion, no instance
+ctrl_opaque	L1	FAIL	an opaque stand-in
+ctrl_implemented_by	L1	FAIL	an implemented_by stand-in
+ctrl_axiom	L0	FAIL	a declared axiom
+ctrl_sorry	L0	FAIL	sorry
+ctrl_native	L0	FAIL	native_decide
+ctrl_target_fake	L0	FAIL	a target-typed theorem on sorry
+ctrl_target_fake	R4	REVIEW	it typechecks as the target statement: never PASS
+ctrl_encoded_iff	R2	FAIL	the restatement read off the encoded carrier
+ctrl_encoded_iff	R6	FAIL	it mentions a carrier whose sections are propositions
+ctrl_proof_of_target	R5	FAIL	a target name on a trivial proof
+ctrl_main_top	R7	REVIEW	packaged: one application of a structural lemma
+ctrl_main_top	R5	REVIEW	a headline name over a packaged or structural proof
+good_gap	L0	PASS	positive control
+good_gap	L1	PASS	positive control
+good_gap	L2	PASS	positive control (side condition 0 < n)
+good_gap	R1	PASS	positive control
+good_gap	R2	PASS	positive control
+good_gap	R3	PASS	positive control
+good_gap	R5	PASS	positive control
+good_gap	R6	PASS	positive control
+good_discharged	L2	PASS	hypothesis discharged by good_crit_proved
+RefereeControls	L4	FAIL	a header names `ctrl_not_defined_anywhere`, defined nowhere
+RefereeControls	L5	FAIL	a quotation and an [OPEN] item stated in prose
+RefereeGoodDoc	L5	PASS	positive control: a docstring stating the mathematics, the open item in Lean
+RefereeQuote	L5	FAIL	a Provenance section quoting a person in a Lean file
+RefereeControls	L6	FAIL	no module docstring, undocumented declarations
+RefereeGoodDoc	L6	PASS	positive control: Mathlib layout, every declaration documented
+RefereeImportGood	L4	PASS	positive control: a module opening on `import` whose docstring names resolve
+RefereeImportBad	L4	FAIL	a module opening on `import` whose docstring names `no_such_declaration_q7`
+RefereeStorageDirect	L7	FAIL	`Finset` stored directly
+RefereeStorageThrough	L7	FAIL	`ZMod` reached through another file's definition; no outside name in the text
+RefereeStorageProofOnly	L7	REVIEW	`ℝ` reached inside a proof only
+RefereeStorageClean	L7	PASS	positive control: core only
+RefereeStorageBridged	L7	PASS	positive control: a Bridge namespace may hold outside objects
+RefereeStorageReadsBridge	L7	FAIL	a native declaration reads a bridge
+good_univ_discharged	L2	PASS	a universe-polymorphic inhabitant at other universe names
+ctrl_univ_unbuilt	L2	FAIL	a universe-polymorphic structure with no inhabitant
+ctrl_long_unbuilt	CLASS	C	an unbuilt hypothesis that prints over several lines
+ctrl_opaque_valued	L1	REVIEW	an opaque with a value: checked by the kernel, hidden from every theorem
+eq_of_x	L0	PASS	a person's theorem named eq_…, classed like any other
+eq_of_x	LS	PASS	the skip filter checks a person's eq_of_… theorem
+controlled_x	L0	PASS	a person's theorem named control…, classed like any other
+controlled_x	LS	PASS	the skip filter checks a person's controlled_… theorem
+eq_1	LS	INFO	the skip filter skips a generated equation lemma
+eq_def	LS	INFO	the skip filter skips a generated unfolding lemma
+match_1	LS	INFO	the skip filter skips a generated matcher
+match_1_1	LS	INFO	the skip filter skips a generated matcher with two suffixes
+brecOn	LS	INFO	the skip filter skips an auxiliary recursor
+match_up	LS	PASS	the skip filter checks a person's match_… name
+ctrl_opaque_valued	L1u	REVIEW	the statement reaches an opaque with a value
+good_opaque_proofonly	L1u	PASS	the opaque is reached only from the proof
+good_gap	L1u	INFO	no opaque reached
+ctrl_staged_easy	R1i	REVIEW	a named input supplied by trivial
+good_staged_hard	R1i	PASS	positive control: the input is supplied by a real lemma
+good_gap	R1i	INFO	no supplied input
+ctrl_twin_crossed	DUP	REVIEW	two definitions with one body, crossed without a proved equivalence
+good_twin_crossed	DUP	PASS	positive control: the twins are bridged by a proved iff
+good_match_twins	DUP	PASS	positive control: compiler matchers shared by two definitions are not twins
+good_gap	DUP	PASS	positive control: no twins
+ctrl_shadow_use	SHADOW	REVIEW	a project copy of a library theorem decides what the name means
+good_gap	SHADOW	PASS	positive control: no copy
+RefereeInstBad	INST	REVIEW	a module that removes an instance
+RefereeInstGood	INST	PASS	positive control: no instance changes
+RefereeVendored	VEND	REVIEW	a project module under a Mathlib folder
+RefereeNotVendored	VEND	PASS	positive control: an ordinary project path
+ctrl_r1_field	R1k	FIELD	a law read from a record's stored axiom
+ctrl_r1_hyp	R1k	HYP	a conclusion carried by a project-proposition hypothesis
+ctrl_r1_ind	R1k	IND	a fact holding by recursion on a project type
+ctrl_definitional	R1k	UNFOLD	unfolding and logic only
+good_gap	R1k	CONTENT	positive control: the proof reaches library theorems
+ctrl_bridged_law	BRIDGED	REVIEW	a law of an object with an outside-library instance, proved by unfolding
+ctrl_definitional	BRIDGED	PASS	positive control: a structural theorem about no bridged object
+CtrlCarried	CARRIER	REVIEW	a project proposition assumed by two theorems and established by none
+GoodCrit	CARRIER	PASS	positive control: assumed by good_discharged, established by good_crit_proved
+RefereeControls	UNFOLD	PASS	the unfold pass accounts for every checked theorem
+behave_mul	BEHAVE	PASS	the behaviour step finds multiplication for a planted mulOut (control 6)
+behave_add	BEHAVE	PASS	positive control: mulOut is not a candidate for Nat.add
+ctrl_iff_reword	IFF	FAIL	an iff that holds by unfolding a definition
+ctrl_iff_boundary	IFF	PASS	the right side states the boundary in numbers
+ctrl_iff_plain	IFF	REVIEW	an iff whose right side names no number
+ctrl_iff_nested	IFF	REVIEW	an iff inside a conjunction
+ctrl_ext_rfl	R1	FAIL	rfl in substance, proved through ext (Set.ext is plumbing)
+ctrl_funext_rfl	R1	FAIL	rfl in substance, proved through funext (caught before the fix too:  funext is in the logic core;  a regression row)

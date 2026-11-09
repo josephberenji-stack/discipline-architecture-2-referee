@@ -1,0 +1,69 @@
+REFEREE	L0	Example.eq_of_double_eq	PASS	[propext, Quot.sound]
+REFEREE	L1	Example.eq_of_double_eq	PASS	69 constants reached, no stand-in
+REFEREE	L1u	Example.eq_of_double_eq	INFO	no opaque with a value reached
+REFEREE	L2	Example.eq_of_double_eq	PASS	Example.double a = Example.double b :: side condition (project data) || unbuilt=0
+REFEREE	L3	Example.eq_of_double_eq	PASS	no hypothesis refuted on file
+REFEREE	R2	Example.eq_of_double_eq	PASS	not an equivalence with an open problem
+REFEREE	R3	Example.eq_of_double_eq	PASS	conclusion is not an open problem under hypotheses
+REFEREE	R4	Example.eq_of_double_eq	INFO	not a registered target statement
+REFEREE	R1	Example.eq_of_double_eq	PASS	reaches Decidable.byContradiction
+REFEREE	R7	Example.eq_of_double_eq	PASS	top step is not a project theorem
+REFEREE	R5	Example.eq_of_double_eq	PASS	the name claims nothing beyond the statement
+REFEREE	R6	Example.eq_of_double_eq	PASS	no proposition-section carrier in the statement
+REFEREE	CLASS	Example.eq_of_double_eq	REVIEW	computed class A?
+REFEREE	L0	Example.two_pow_ten	FAIL	extra axioms [sorryAx]
+REFEREE	L1	Example.two_pow_ten	PASS	15 constants reached, no stand-in
+REFEREE	L1u	Example.two_pow_ten	INFO	no opaque with a value reached
+REFEREE	L2	Example.two_pow_ten	PASS	no hypotheses
+REFEREE	L3	Example.two_pow_ten	PASS	no hypothesis refuted on file
+REFEREE	R2	Example.two_pow_ten	PASS	not an equivalence with an open problem
+REFEREE	R3	Example.two_pow_ten	PASS	conclusion is not an open problem under hypotheses
+REFEREE	R4	Example.two_pow_ten	INFO	not a registered target statement
+REFEREE	R1	Example.two_pow_ten	FAIL	structural: holds by definitions and logic alone
+REFEREE	R7	Example.two_pow_ten	PASS	top step is not a project theorem
+REFEREE	R5	Example.two_pow_ten	PASS	the name claims nothing beyond the statement
+REFEREE	R6	Example.two_pow_ten	PASS	no proposition-section carrier in the statement
+REFEREE	CLASS	Example.two_pow_ten	FAIL	computed class D; broken: ['L0']
+REFEREE	L0	Example.prime_above_ten	PASS	[propext]
+REFEREE	L1	Example.prime_above_ten	PASS	21 constants reached, no stand-in
+REFEREE	L1u	Example.prime_above_ten	INFO	no opaque with a value reached
+REFEREE	L2	Example.prime_above_ten	FAIL	Example.PrimeSource :: UNBUILT || unbuilt=1
+REFEREE	L3	Example.prime_above_ten	PASS	no hypothesis refuted on file
+REFEREE	R2	Example.prime_above_ten	PASS	not an equivalence with an open problem
+REFEREE	R3	Example.prime_above_ten	PASS	conclusion is not an open problem under hypotheses
+REFEREE	R4	Example.prime_above_ten	INFO	not a registered target statement
+REFEREE	R1	Example.prime_above_ten	FAIL	structural: holds by definitions and logic alone
+REFEREE	R7	Example.prime_above_ten	PASS	top step is not a project theorem
+REFEREE	R5	Example.prime_above_ten	PASS	the name claims nothing beyond the statement
+REFEREE	R6	Example.prime_above_ten	PASS	no proposition-section carrier in the statement
+REFEREE	CLASS	Example.prime_above_ten	PASS	computed class C
+REFEREE	L0	Example.double_eq	PASS	[]
+REFEREE	L1	Example.double_eq	PASS	7 constants reached, no stand-in
+REFEREE	L1u	Example.double_eq	INFO	no opaque with a value reached
+REFEREE	L2	Example.double_eq	PASS	no hypotheses
+REFEREE	L3	Example.double_eq	PASS	no hypothesis refuted on file
+REFEREE	R2	Example.double_eq	PASS	not an equivalence with an open problem
+REFEREE	R3	Example.double_eq	PASS	conclusion is not an open problem under hypotheses
+REFEREE	R4	Example.double_eq	INFO	not a registered target statement
+REFEREE	R1	Example.double_eq	FAIL	structural: holds by definitions and logic alone
+REFEREE	R7	Example.double_eq	PASS	top step is not a project theorem
+REFEREE	R5	Example.double_eq	PASS	the name claims nothing beyond the statement
+REFEREE	R6	Example.double_eq	PASS	no proposition-section carrier in the statement
+REFEREE	CLASS	Example.double_eq	PASS	computed class DEF
+REFEREE	L0	Example.double_eq_two_mul	PASS	[propext]
+REFEREE	L1	Example.double_eq_two_mul	PASS	54 constants reached, no stand-in
+REFEREE	L1u	Example.double_eq_two_mul	INFO	no opaque with a value reached
+REFEREE	L2	Example.double_eq_two_mul	PASS	no hypotheses
+REFEREE	L3	Example.double_eq_two_mul	PASS	no hypothesis refuted on file
+REFEREE	R2	Example.double_eq_two_mul	PASS	not an equivalence with an open problem
+REFEREE	R3	Example.double_eq_two_mul	PASS	conclusion is not an open problem under hypotheses
+REFEREE	R4	Example.double_eq_two_mul	INFO	not a registered target statement
+REFEREE	R1	Example.double_eq_two_mul	PASS	reaches Mathlib.Tactic.Ring.of_eq
+REFEREE	R7	Example.double_eq_two_mul	PASS	top step is not a project theorem
+REFEREE	R5	Example.double_eq_two_mul	PASS	the name claims nothing beyond the statement
+REFEREE	R6	Example.double_eq_two_mul	PASS	no proposition-section carrier in the statement
+REFEREE	CLASS	Example.double_eq_two_mul	REVIEW	computed class A?
+REFEREE	L4	Example.Doubling	PASS	all 7 header names resolve
+REFEREE	MODULE	Example.Doubling	INFO	5 theorems checked
+REFEREE	L5	Example.Doubling	PASS	no internal citation; every [OPEN] item is stated in Lean
+REFEREE	L6	Example.Doubling	PASS	Mathlib layout; every public declaration documented

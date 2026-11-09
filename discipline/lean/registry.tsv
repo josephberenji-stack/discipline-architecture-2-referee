@@ -1,0 +1,12 @@
+# kind	value
+#
+# The project's lists, read by referee_lean.py.  Every kind ships empty.  One `kind<TAB>value` per line:
+#   root      a root namespace of the project's modules              e.g.  root	MyProject
+#   open      a registered open problem (a Lean constant)             e.g.  open	RiemannHypothesis   (from Mathlib)
+#   target    a registered target statement (R4 reports it, never passes it)
+#   claim     a word that claims a target when it appears in a theorem's name
+#   carrier   a structure whose instances store propositions in their sections
+#   cite      a regular expression for a citation of the project's internal notes (L5)
+#   note      a regular expression for a non-library line (L6)
+#
+# Adding a name is a record with a reason;  removing one is the owner's decision.

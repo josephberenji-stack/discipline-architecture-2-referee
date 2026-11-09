@@ -1,0 +1,6 @@
+[[LOG connect]]
+what:      I think adding up odd numbers always gives you a square.
+connects:  SQ1; example.py
+how:       SQ1 -- instance of
+because:   the first thing the project checked
+[[/LOG]]

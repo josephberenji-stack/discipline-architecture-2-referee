@@ -1,0 +1,9 @@
+{
+  "opt_in": null,
+  "kernel": [],
+  "constructors": [],
+  "unwrap": [],
+  "gate": null,
+  "translations": [],
+  "rules": {"base": true, "hex": true, "bitop": true, "unwrap": true, "gate": true}
+}

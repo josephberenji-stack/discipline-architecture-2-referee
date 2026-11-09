@@ -1,0 +1,3 @@
+module	gap	kind	name
+Example.Doubling	accepted-not-stated	ctor	Example.PrimeSource.mk
+Example.Doubling	accepted-not-stated	rec	Example.PrimeSource.rec

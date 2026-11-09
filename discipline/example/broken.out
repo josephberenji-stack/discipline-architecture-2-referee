@@ -1,0 +1,10 @@
+  [B1] DECLARED  predicts: something holds
+  [B1]           kills:    it does not
+  [B1]           budget:   formulation 1 of 3
+  B1 REFUSED.  literal verdict.  this verdict was typed, not computed
+
+  ============================== referee ==============================
+        B1  NO VERDICT predicted: something holds
+  REFEREE: the run does not count.  Reasons:
+    - B1: verdict argument is a literal -- the verdict must be computed
+    - no negative control ran

@@ -1,0 +1,6 @@
+__pycache__/
+*.pyc
+.lake/
+lake-packages/
+discipline-report.md
+selftest-rows.tsv

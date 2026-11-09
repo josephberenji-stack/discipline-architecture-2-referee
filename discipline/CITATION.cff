@@ -1,0 +1,35 @@
+cff-version: 1.2.0
+message: "If you use this software, please cite it as below."
+title: "discipline: a referee for computational claims made with a language model"
+type: software
+version: "2.0.0"
+date-released: "2026-11-07"
+authors:
+  - family-names: "Berenji"
+    given-names: "Joseph"
+repository-code: "https://github.com/josephberenji-stack/discipline-architecture-2-referee"
+license: "Apache-2.0"
+keywords:
+  - reproducibility
+  - language models
+  - computational mathematics
+  - verification
+  - research methodology
+  - Lean 4
+  - formal verification
+abstract: >-
+  A dependency-free Python suite that separates the party computing a result
+  from the party announcing whether it came out. A runtime referee refuses
+  typed verdicts, requires a declaration before every verdict and a negative
+  control before the run counts; twelve static checks enforce predictions
+  before runs, rows behind every count, guarded domains, propagated
+  withdrawals, one definition per word, no forced quantity reported as a
+  measurement, resolvable citations, ground-up construction, checkable copies
+  of primitives, a gap-free correction ledger, and size-capped working
+  documents; a baseline makes new rows visible over a standing backlog; a
+  results index makes retrieval a search rather than a memory. A Lean
+  referee classes each theorem the kernel accepts by what its proof actually
+  reaches (axioms, stand-ins, unbuilt or refuted hypotheses, restatements,
+  definitional proofs), eight static checks read Python runs without
+  executing them, and a kernel census audits the referee against the list
+  of everything the kernel accepted.

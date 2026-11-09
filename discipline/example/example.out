@@ -1,0 +1,12 @@
+  [SQ1] DECLARED  predicts: for every n from 1 to 200 the sum of the first n odd numbers is a perfect square
+  [SQ1]           kills:    an n in 1..200 whose sum of the first n odd numbers is not a perfect square
+  [SQ1]           control:  the sum of the first n even numbers is a perfect square, which must fail
+  [SQ1]           budget:   formulation 1 of 3
+  [SQ1] 0 violating rows (of the examined set; see the section's count line)
+  SQ1 HOLDS.  200 of 200 sums are squares
+  control even-ctrl: fails as it must.  200 of 200 even sums are not squares
+  control even-ctrl: silent on 0 of 200 rows
+
+  ============================== referee ==============================
+       SQ1  HOLDS      predicted: for every n from 1 to 200 the sum of the first n odd numbers is a perfect square
+  REFEREE: 1 of 1 declared claims hold; 1 control(s) failed as required.  The run counts.

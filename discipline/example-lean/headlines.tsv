@@ -1,0 +1,6 @@
+# theorem	module	claimed class	known as
+Example.double_eq	Example.Doubling	DEF	-
+Example.double_eq_two_mul	Example.Doubling	B	the distributive law (Peano 1889)
+Example.eq_of_double_eq	Example.Doubling	A?	-
+Example.prime_above_ten	Example.Doubling	A?	-
+Example.two_pow_ten	Example.Doubling	A?	-
